@@ -1,0 +1,977 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
+        <link rel="stylesheet" href="css/qgis2web.css">
+        <link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/leaflet.photon.css">
+        <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+         /* Popup lokasi: sederhana, editorial, dan tetap nyaman di layar ponsel. */
+        .leaflet-popup.lab-popup-container .leaflet-popup-content-wrapper {
+            padding: 0;
+            overflow: hidden;
+            border-radius: 16px;
+            background: #fff;
+            box-shadow: 0 14px 40px rgba(24, 39, 31, .18);
+        }
+        .leaflet-popup.lab-popup-container .leaflet-popup-content {
+            width: 270px !important;
+            max-width: calc(100vw - 68px);
+            margin: 0;
+            line-height: 1.45;
+        }
+        .leaflet-popup.lab-popup-container .leaflet-popup-tip {
+            background: #fff;
+            box-shadow: 3px 3px 8px rgba(24, 39, 31, .06);
+        }
+        .leaflet-popup.lab-popup-container a.leaflet-popup-close-button {
+            z-index: 2;
+            top: 13px;
+            right: 13px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            color: #526158;
+            font: 24px/27px Arial, sans-serif;
+            text-align: center;
+            transition: background .18s ease, color .18s ease;
+        }
+        .leaflet-popup.lab-popup-container a.leaflet-popup-close-button:hover {
+            color: #173e2c;
+            background: #eef4ef;
+        }
+        .lab-popup {
+            padding: 18px 17px 16px;
+            color: #26352d;
+            font-family: Inter, "Segoe UI", Arial, sans-serif;
+        }
+        .lab-popup__topline {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 34px 8px 0;
+        }
+        .lab-popup__eyebrow {
+            color: #718077;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+        }
+
+        .lab-popup__title {
+            margin: 0;
+            color: #24372d;
+            font-size: 20px;
+            font-weight: 750;
+            letter-spacing: -.65px;
+            line-height: 1.18;
+            overflow-wrap: anywhere;
+        }
+        .lab-popup__rule {
+            height: 2px;
+            width: 100%;
+            margin: 10px 0 9px;
+            background: #2b9a60;
+        }
+        .lab-popup__field {
+            display: grid;
+            grid-template-columns: 65px minmax(0, 1fr);
+            align-items: start;
+            gap: 10px;
+            padding: 7px 0;
+            border-bottom: 1px solid #e9eeea;
+        }
+        .lab-popup__label {
+            padding-top: 2px;
+            color: #758078;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .lab-popup__value {
+            min-width: 0;
+            color: #34463b;
+            font-size: 13px;
+            font-weight: 600;
+            overflow-wrap: anywhere;
+        }
+        .lab-popup__category {
+            display: inline-block;
+            padding: 4px 9px;
+            border-radius: 5px;
+            background: #edf6ef;
+            color: #267346;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1.35;
+        }
+        .lab-popup__image-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 115px;
+            margin-top: 12px;
+            overflow: hidden;
+            border-radius: 10px;
+            background: #f0f3ef;
+        }
+        .lab-popup__image {
+            display: block;
+            width: 100%;
+            max-height: 150px;
+            min-height: 115px;
+            object-fit: cover;
+        }
+        .lab-popup__image-fallback {
+            display: none;
+            padding: 30px 15px;
+            color: #7b8980;
+            font-size: 12px;
+            text-align: center;
+        }
+        .lab-popup__image-wrap.is-empty .lab-popup__image-fallback {
+            display: block;
+        }
+        .lab-popup__coordinates {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            margin-top: 13px;
+        }
+        .lab-popup__coordinates span {
+            color: #859188;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+        }
+        .lab-popup__coordinates strong {
+            color: #526258;
+            font-size: 11px;
+            font-weight: 500;
+            overflow-wrap: anywhere;
+        }
+        .lab-popup__link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 12px;
+            padding: 9px 11px;
+            border: 1px solid #dce9df;
+            border-radius: 8px;
+            color: #267346 !important;
+            background: #fbfdfb;
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none !important;
+            transition: background .18s ease, border-color .18s ease;
+        }
+        .lab-popup__link:hover {
+            border-color: #b6d7c0;
+            background: #f0f8f2;
+        }
+        @media (max-width: 480px) {
+            .leaflet-popup.lab-popup-container .leaflet-popup-content {
+                width: 250px !important;
+                max-width: calc(100vw - 68px);
+            }
+            .lab-popup {
+                padding: 16px 15px 14px;
+            }
+            .lab-popup__title {
+                font-size: 19px;
+            }
+            .lab-popup__field {
+                grid-template-columns: 62px minmax(0, 1fr);
+            }
+        }
+        </style>
+
+       
+        <title></title>
+    </head>
+    <body>
+        <div id="map">
+        </div>
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/L.Control.Layers.Tree.min.js"></script>
+        <script src="js/leaflet-svg-shape-markers.min.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet.photon.js"></script>
+        <script src="data/LapakGIS_Batas_Kabupaten_2024_1.js"></script>
+        <script src="data/LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2.js"></script>
+        <script src="data/DataKoordinatPoskoKKM_3.js"></script>
+        <script>
+        var map = L.map('map', {
+            zoomControl:false, maxZoom:28, minZoom:1
+        }).fitBounds([[-7.104952016948717,107.94358640479902],[-6.495990791876723,108.99916729612642]]);
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        // remove popup's row if "visible-with-data"
+        function removeEmptyRowsFromPopupContent(content, feature) {
+         var tempDiv = document.createElement('div');
+         tempDiv.innerHTML = content;
+         var rows = tempDiv.querySelectorAll('tr');
+         for (var i = 0; i < rows.length; i++) {
+             var td = rows[i].querySelector('td.visible-with-data');
+             var key = td ? td.id : '';
+             if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
+                 rows[i].parentNode.removeChild(rows[i]);
+             }
+         }
+         return tempDiv.innerHTML;
+        }
+        // modify popup if contains media
+        function addClassToPopupIfMedia(content, popup) {
+            var tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+            var imgTd = tempDiv.querySelector('td img');
+            if (imgTd) {
+                var src = imgTd.getAttribute('src');
+                if (/\.(jpg|jpeg|png|gif|bmp|webp|avif)$/i.test(src)) {
+                    popup._contentNode.classList.add('media');
+                    setTimeout(function() {
+                        popup.update();
+                    }, 10);
+                } else if (/\.(mp3|wav|ogg|aac)$/i.test(src)) {
+                    var audio = document.createElement('audio');
+                    audio.controls = true;
+                    audio.src = src;
+                    imgTd.parentNode.replaceChild(audio, imgTd);
+                    popup._contentNode.classList.add('media');
+                    setTimeout(function() {
+                        popup.setContent(tempDiv.innerHTML);
+                        popup.update();
+                    }, 10);
+                } else if (/\.(mp4|webm|ogg|mov)$/i.test(src)) {
+                    var video = document.createElement('video');
+                    video.controls = true;
+                    video.src = src;
+                    video.style.width = "400px";
+                    video.style.height = "300px";
+                    video.style.maxHeight = "60vh";
+                    video.style.maxWidth = "60vw";
+                    imgTd.parentNode.replaceChild(video, imgTd);
+                    popup._contentNode.classList.add('media');
+                    // Aggiorna il popup quando il video carica i metadati
+                    video.addEventListener('loadedmetadata', function() {
+                        popup.update();
+                    });
+                    setTimeout(function() {
+                        popup.setContent(tempDiv.innerHTML);
+                        popup.update();
+                    }, 10);
+                } else {
+                    popup._contentNode.classList.remove('media');
+                }
+            } else {
+                popup._contentNode.classList.remove('media');
+            }
+        }
+        var zoomControl = L.control.zoom({
+            position: 'topleft'
+        }).addTo(map);
+        var bounds_group = new L.featureGroup([]);
+        
+        function setBounds() {
+        }
+        map.createPane('pane_GoogleMaps_0');
+        map.getPane('pane_GoogleMaps_0').style.zIndex = 400;
+        var layer_GoogleMaps_0 = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            pane: 'pane_GoogleMaps_0',
+            opacity: 1.0,
+            attribution: '',
+            minZoom: 1,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 19
+        });
+        layer_GoogleMaps_0;
+        map.addLayer(layer_GoogleMaps_0);
+        function pop_LapakGIS_Batas_Kabupaten_2024_1(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['KDPKAB'] !== null ? autolinker.link(String(feature.properties['KDPKAB']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['KDPPUM'] !== null ? autolinker.link(String(feature.properties['KDPPUM']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['WADMKK'] !== null ? autolinker.link(String(feature.properties['WADMKK']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['WADMPR'] !== null ? autolinker.link(String(feature.properties['WADMPR']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['METADATA'] !== null ? autolinker.link(String(feature.properties['METADATA']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['UPDATED'] !== null ? autolinker.link(String(feature.properties['UPDATED']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Jml_Lab'] !== null ? autolinker.link(String(feature.properties['Jml_Lab']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			// layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_LapakGIS_Batas_Kabupaten_2024_1_0(feature) {
+            switch(String(feature.properties['WADMKK'])) {
+                case 'Cirebon':
+                    return {
+                pane: 'pane_LapakGIS_Batas_Kabupaten_2024_1',
+                opacity: 1,
+                color: 'rgba(128,14,16,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(133,133,133,0.596078431372549)',
+                interactive: true,
+            }
+                    break;
+                case 'Indramayu':
+                    return {
+                pane: 'pane_LapakGIS_Batas_Kabupaten_2024_1',
+                opacity: 1,
+                color: 'rgba(128,14,16,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(133,133,133,0.43137254901960786)',
+                interactive: true,
+            }
+                    break;
+                case 'Kota Cirebon':
+                    return {
+                pane: 'pane_LapakGIS_Batas_Kabupaten_2024_1',
+                opacity: 1,
+                color: 'rgba(128,14,16,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(133,133,133,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Kuningan':
+                    return {
+                pane: 'pane_LapakGIS_Batas_Kabupaten_2024_1',
+                opacity: 1,
+                color: 'rgba(128,14,16,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(133,133,133,0.7098039215686275)',
+                interactive: true,
+            }
+                    break;
+                case 'Majalengka':
+                    return {
+                pane: 'pane_LapakGIS_Batas_Kabupaten_2024_1',
+                opacity: 1,
+                color: 'rgba(128,14,16,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(133,133,133,0.5176470588235295)',
+                interactive: true,
+            }
+                    break;
+                default:
+                    return {
+                pane: 'pane_LapakGIS_Batas_Kabupaten_2024_1',
+                opacity: 1,
+                color: 'rgba(128,14,16,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(26,207,74,1.0)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_LapakGIS_Batas_Kabupaten_2024_1');
+        map.getPane('pane_LapakGIS_Batas_Kabupaten_2024_1').style.zIndex = 401;
+        map.getPane('pane_LapakGIS_Batas_Kabupaten_2024_1').style['mix-blend-mode'] = 'normal';
+        var layer_LapakGIS_Batas_Kabupaten_2024_1 = new L.geoJson(json_LapakGIS_Batas_Kabupaten_2024_1, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_LapakGIS_Batas_Kabupaten_2024_1',
+            layerName: 'layer_LapakGIS_Batas_Kabupaten_2024_1',
+            pane: 'pane_LapakGIS_Batas_Kabupaten_2024_1',
+            onEachFeature: pop_LapakGIS_Batas_Kabupaten_2024_1,
+            style: style_LapakGIS_Batas_Kabupaten_2024_1_0,
+        });
+        bounds_group.addLayer(layer_LapakGIS_Batas_Kabupaten_2024_1);
+        map.addLayer(layer_LapakGIS_Batas_Kabupaten_2024_1);
+        function pop_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['OBJECTID'] !== null ? autolinker.link(String(feature.properties['OBJECTID']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['NAMOBJ'] !== null ? autolinker.link(String(feature.properties['NAMOBJ']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['FCODE'] !== null ? autolinker.link(String(feature.properties['FCODE']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['REMARK'] !== null ? autolinker.link(String(feature.properties['REMARK']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['METADATA'] !== null ? autolinker.link(String(feature.properties['METADATA']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['SRS_ID'] !== null ? autolinker.link(String(feature.properties['SRS_ID']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['KDBBPS'] !== null ? autolinker.link(String(feature.properties['KDBBPS']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['KDCBPS'] !== null ? autolinker.link(String(feature.properties['KDCBPS']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['KDCPUM'] !== null ? autolinker.link(String(feature.properties['KDCPUM']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['KDEBPS'] !== null ? autolinker.link(String(feature.properties['KDEBPS']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['KDEPUM'] !== null ? autolinker.link(String(feature.properties['KDEPUM']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['KDPBPS'] !== null ? autolinker.link(String(feature.properties['KDPBPS']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['KDPKAB'] !== null ? autolinker.link(String(feature.properties['KDPKAB']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['KDPPUM'] !== null ? autolinker.link(String(feature.properties['KDPPUM']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['LUASWH'] !== null ? autolinker.link(String(feature.properties['LUASWH']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['TIPADM'] !== null ? autolinker.link(String(feature.properties['TIPADM']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['WADMKC'] !== null ? autolinker.link(String(feature.properties['WADMKC']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['WADMKD'] !== null ? autolinker.link(String(feature.properties['WADMKD']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['WADMKK'] !== null ? autolinker.link(String(feature.properties['WADMKK']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['WADMPR'] !== null ? autolinker.link(String(feature.properties['WADMPR']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['WIADKC'] !== null ? autolinker.link(String(feature.properties['WIADKC']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['WIADKK'] !== null ? autolinker.link(String(feature.properties['WIADKK']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['WIADPR'] !== null ? autolinker.link(String(feature.properties['WIADPR']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['WIADKD'] !== null ? autolinker.link(String(feature.properties['WIADKD']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['UUPP'] !== null ? autolinker.link(String(feature.properties['UUPP']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Status'] !== null ? autolinker.link(String(feature.properties['Status']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['LastSync'] !== null ? autolinker.link(String(feature.properties['LastSync']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			// layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2_0(feature) {
+            switch(String(feature.properties['NAMOBJ'])) {
+                case 'Ambulu':
+                    return {
+                pane: 'pane_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(95,215,236,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Cibunut':
+                    return {
+                pane: 'pane_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(203,17,104,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Cikondang':
+                    return {
+                pane: 'pane_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(118,69,216,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Gunungmanik':
+                    return {
+                pane: 'pane_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(204,172,77,1.0)',
+                interactive: true,
+            }
+                    break;
+                default:
+                    return {
+                pane: 'pane_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(83,223,75,1.0)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2');
+        map.getPane('pane_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2').style.zIndex = 402;
+        map.getPane('pane_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2').style['mix-blend-mode'] = 'normal';
+        var layer_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2 = new L.geoJson(json_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2',
+            layerName: 'layer_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2',
+            pane: 'pane_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2',
+            onEachFeature: pop_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2,
+            style: style_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2_0,
+        });
+        bounds_group.addLayer(layer_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2);
+        map.addLayer(layer_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2);
+        // Foto popup: simpan foto di folder "images/lab/" lalu sesuaikan nama file di sini.
+        // Contoh: "Living Pen. Gunungmanik": "images/lab/living-pen-gunungmanik.jpg"
+        var fotoLaboratorium = {
+            "Living Pend. Gunungmanik": "images/lab/living-pend-gunungmanik.jpg",
+            "Living Pen. Gunungmanik": "images/lab/living-pen-gunungmanik.jpg",
+            "Living Pen. Cikondang": "images/lab/living-pen-cikondang.jpg",
+            "Living Peng. Cikondang": "images/lab/living-peng-cikondang.jpg",
+            "DPMD Kuningan": "images/lab/dpmd-kuningan.jpg",
+            "Living Pend. Cibunut": "images/lab/living-pend-cibunut.jpg",
+            "Living Pen. Cibunut": "images/lab/living-pen-cibunut.jpg",
+            "Living Peng. Ambulu": "images/lab/living-peng-ambulu.jpg"
+        };
+
+        function escapePopupText(value) {
+            return String(value == null || value === '' ? 'Belum tersedia' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function pop_DataKoordinatPoskoKKM_3(feature, layer) {
+            var p = feature.properties || {};
+            var nama = p['Nama_Lab'] || 'Lokasi tanpa nama';
+            var kategori = p['Kategori'] || 'Kategori belum diisi';
+            var desa = p['Desa_Binaan'] && p['Desa_Binaan'] !== '-' ? p['Desa_Binaan'] : '';
+            var kabupaten = p['Kabupaten'] || '';
+            var latitude = p['Latitude'];
+            var longitude = p['Longitude'];
+            var linkDrive = p['Link_Drive'];
+            var foto = fotoLaboratorium[nama] || '';
+
+            var lokasi = [desa, kabupaten].filter(function(item) {
+                return item && item !== '-';
+            }).join(', ');
+
+            var fotoHTML = foto
+                ? '<div class="lab-popup__image-wrap">' +
+                    '<img class="lab-popup__image" src="' + escapePopupText(foto) +
+                    '" alt="Foto ' + escapePopupText(nama) + '" loading="lazy" ' +
+                    'onerror="this.closest(&quot;.lab-popup__image-wrap&quot;).classList.add(&quot;is-empty&quot;);this.remove();">' +
+                    '<span class="lab-popup__image-fallback">Foto lokasi belum ditambahkan</span>' +
+                  '</div>'
+                : '<div class="lab-popup__image-wrap is-empty">' +
+                    '<span class="lab-popup__image-fallback">Foto lokasi belum ditambahkan</span>' +
+                  '</div>';
+
+            var koordinatHTML = (latitude !== null && latitude !== undefined && latitude !== '' &&
+                                  longitude !== null && longitude !== undefined && longitude !== '')
+                ? '<div class="lab-popup__coordinates">' +
+                    '<span>KOORDINAT</span><strong>' + escapePopupText(latitude) + ', ' +
+                    escapePopupText(longitude) + '</strong>' +
+                  '</div>'
+                : '';
+
+            var driveHTML = linkDrive
+                ? '<a class="lab-popup__link" href="' + escapePopupText(linkDrive) +
+                    '" target="_blank" rel="noopener noreferrer">' +
+                    '<span>Lihat dokumentasi</span><span aria-hidden="true">↗</span></a>'
+                : '';
+
+            var popupContent =
+                '<article class="lab-popup">' +
+                    '<div class="lab-popup__topline"><span class="lab-popup__eyebrow">DATA LOKASI</span>' +
+                    '<span class="lab-popup__dot"></span></div>' +
+                    '<h2 class="lab-popup__title">' + escapePopupText(nama) + '</h2>' +
+                    '<div class="lab-popup__rule"></div>' +
+                    '<div class="lab-popup__field">' +
+                        '<span class="lab-popup__label">Kategori</span>' +
+                        '<span class="lab-popup__value"><span class="lab-popup__category">' +
+                            escapePopupText(kategori) + '</span></span>' +
+                    '</div>' +
+                    (lokasi ? '<div class="lab-popup__field">' +
+                        '<span class="lab-popup__label">Lokasi</span>' +
+                        '<span class="lab-popup__value">' + escapePopupText(lokasi) + '</span>' +
+                    '</div>' : '') +
+                    fotoHTML +
+                    koordinatHTML +
+                    driveHTML +
+                '</article>';
+
+            layer.bindPopup(popupContent, {
+                maxWidth: 360,
+                minWidth: 280,
+                maxHeight: 520,
+                className: 'lab-popup-container',
+                closeButton: true,
+                autoPanPadding: [24, 24]
+            });
+        }
+
+        function style_DataKoordinatPoskoKKM_3_0(feature) {
+            switch(String(feature.properties['Nama_Lab'])) {
+                case 'DPMD Kuningan':
+                    return {
+                pane: 'pane_DataKoordinatPoskoKKM_3',
+                shape: 'diamond',
+                radius: 8.8,
+                opacity: 1,
+                color: 'rgba(50,87,128,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(201,110,161,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Living Pen. Cibunut':
+                    return {
+                pane: 'pane_DataKoordinatPoskoKKM_3',
+                shape: 'diamond',
+                radius: 8.8,
+                opacity: 1,
+                color: 'rgba(50,87,128,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(173,225,106,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Living Pen. Cikondang':
+                    return {
+                pane: 'pane_DataKoordinatPoskoKKM_3',
+                shape: 'diamond',
+                radius: 8.8,
+                opacity: 1,
+                color: 'rgba(50,87,128,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(74,216,88,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Living Pen. Gunungmanik ':
+                    return {
+                pane: 'pane_DataKoordinatPoskoKKM_3',
+                shape: 'diamond',
+                radius: 8.8,
+                opacity: 1,
+                color: 'rgba(50,87,128,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(225,194,91,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Living Pend. Cibunut':
+                    return {
+                pane: 'pane_DataKoordinatPoskoKKM_3',
+                shape: 'diamond',
+                radius: 8.8,
+                opacity: 1,
+                color: 'rgba(50,87,128,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(37,139,218,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Living Pend. Gunungmanik ':
+                    return {
+                pane: 'pane_DataKoordinatPoskoKKM_3',
+                shape: 'diamond',
+                radius: 8.8,
+                opacity: 1,
+                color: 'rgba(50,87,128,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(37,216,174,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Living Peng. Ambulu':
+                    return {
+                pane: 'pane_DataKoordinatPoskoKKM_3',
+                shape: 'diamond',
+                radius: 8.8,
+                opacity: 1,
+                color: 'rgba(50,87,128,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(170,43,208,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Living Peng. Cikondang':
+                    return {
+                pane: 'pane_DataKoordinatPoskoKKM_3',
+                shape: 'diamond',
+                radius: 8.8,
+                opacity: 1,
+                color: 'rgba(50,87,128,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(95,82,217,1.0)',
+                interactive: true,
+            }
+                    break;
+                default:
+                    return {
+                pane: 'pane_DataKoordinatPoskoKKM_3',
+                shape: 'diamond',
+                radius: 8.8,
+                opacity: 1,
+                color: 'rgba(50,87,128,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(200,129,122,1.0)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_DataKoordinatPoskoKKM_3');
+        map.getPane('pane_DataKoordinatPoskoKKM_3').style.zIndex = 403;
+        map.getPane('pane_DataKoordinatPoskoKKM_3').style['mix-blend-mode'] = 'normal';
+        var layer_DataKoordinatPoskoKKM_3 = new L.geoJson(json_DataKoordinatPoskoKKM_3, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_DataKoordinatPoskoKKM_3',
+            layerName: 'layer_DataKoordinatPoskoKKM_3',
+            pane: 'pane_DataKoordinatPoskoKKM_3',
+            onEachFeature: pop_DataKoordinatPoskoKKM_3,
+            pointToLayer: function (feature, latlng) {
+                var context = {
+                    feature: feature,
+                    variables: {}
+                };
+                return L.shapeMarker(latlng, style_DataKoordinatPoskoKKM_3_0(feature));
+            },
+        });
+        bounds_group.addLayer(layer_DataKoordinatPoskoKKM_3);
+        map.addLayer(layer_DataKoordinatPoskoKKM_3);
+        map.on("zoomend", function(e) {
+            if (map.getZoom() <= 19 && map.getZoom() >= 11) {
+                map.addLayer(layer_DataKoordinatPoskoKKM_3);
+            } else if (map.getZoom() > 19 || map.getZoom() < 11) {
+                map.removeLayer(layer_DataKoordinatPoskoKKM_3);
+            }
+        });
+            if (map.getZoom() <= 19 && map.getZoom() >= 11) {
+                map.addLayer(layer_DataKoordinatPoskoKKM_3);
+            } else if (map.getZoom() > 19 || map.getZoom() < 11) {
+                map.removeLayer(layer_DataKoordinatPoskoKKM_3);
+            }
+            
+        var overlayMaps = {
+            "Data Koordinat Posko KKM": layer_DataKoordinatPoskoKKM_3,
+            "Batas Desa/Kelurahan": layer_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2,
+            "Batas Kabupaten": layer_LapakGIS_Batas_Kabupaten_2024_1,
+            "Google Maps": layer_GoogleMaps_0
+        };
+
+        L.control.layers(null, overlayMaps, { collapsed: true }).addTo(map);
+
+        setBounds();
+        var i = 0;
+        layer_LapakGIS_Batas_Kabupaten_2024_1.eachLayer(function(layer) {
+            var context = {
+                feature: layer.feature,
+                variables: {}
+            };
+            layer.bindTooltip((layer.feature.properties['WADMKK'] !== null?String('<div style="color: #ffffff; font-size: 15pt; font-weight: bold; font-family: \'Open Sans\', sans-serif;">' + layer.feature.properties['WADMKK']) + '</div>':''), {permanent: true, offset: [-0, -16], className: 'css_LapakGIS_Batas_Kabupaten_2024_1'});
+            labels.push(layer);
+            totalMarkers += 1;
+              layer.added = true;
+              addLabel(layer, i);
+              i++;
+        });
+        var i = 0;
+        layer_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2.eachLayer(function(layer) {
+            var context = {
+                feature: layer.feature,
+                variables: {}
+            };
+            layer.bindTooltip((layer.feature.properties['NAMOBJ'] !== null?String('<div style="color: #323232; font-size: 10pt; font-weight: bold; font-family: \'Open Sans\', sans-serif;">' + layer.feature.properties['NAMOBJ']) + '</div>':''), {permanent: true, offset: [-0, -16], className: 'css_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2'});
+            labels.push(layer);
+            totalMarkers += 1;
+              layer.added = true;
+              addLabel(layer, i);
+              i++;
+        });
+        var i = 0;
+        layer_DataKoordinatPoskoKKM_3.eachLayer(function(layer) {
+            var context = {
+                feature: layer.feature,
+                variables: {}
+            };
+            layer.bindTooltip((layer.feature.properties['Nama_Lab'] !== null?String('<div style="color: #181818; font-size: 11pt; font-weight: bold; font-style: italic; font-family: \'Open Sans\', sans-serif;">' + layer.feature.properties['Nama_Lab']) + '</div>':''), {permanent: true, offset: [-0, -16], className: 'css_DataKoordinatPoskoKKM_3'});
+            labels.push(layer);
+            totalMarkers += 1;
+              layer.added = true;
+              addLabel(layer, i);
+              i++;
+        });
+        resetLabels([layer_LapakGIS_Batas_Kabupaten_2024_1,layer_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2,layer_DataKoordinatPoskoKKM_3]);
+        map.on("zoomend", function(){
+            resetLabels([layer_LapakGIS_Batas_Kabupaten_2024_1,layer_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2,layer_DataKoordinatPoskoKKM_3]);
+        });
+        map.on("layeradd", function(){
+            resetLabels([layer_LapakGIS_Batas_Kabupaten_2024_1,layer_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2,layer_DataKoordinatPoskoKKM_3]);
+        });
+        map.on("layerremove", function(){
+            resetLabels([layer_LapakGIS_Batas_Kabupaten_2024_1,layer_LapakGIScom_BATAS_DESAKEL_AR_EDISI_JULI_2026__2,layer_DataKoordinatPoskoKKM_3]);
+        });
+        </script>        
+    </body>
+</html>
